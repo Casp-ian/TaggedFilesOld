@@ -83,8 +83,8 @@ class Storage
   
   def getFilesByTag(tagName)
     tagId = getTagId(tagName)
-    fileIds = $db.execute("select fileId from connections where tagId = ?", tagId)
-    fileNames = $db.execute("select name from files where id in (?)", fileIds)  
+    fileIds = @db.execute("select fileId from connections where tagId = ?", tagId)
+    return @db.execute("select name from files where id in (?)", fileIds)  
   end
   
   def listFiles()
@@ -110,6 +110,14 @@ class Command
     @options = arguments[1..-1]
   end
   
+  def resultSetToArray(set)
+    result = []
+    set.each do |item|
+      result.push "#{item[0]}"
+    end 
+    return result
+  end
+
   def addLink()
 
     begin
@@ -130,20 +138,62 @@ class Command
   end
 
   def assignTag()
-    puts("assignhtahg")
-    puts(@options)
+    begin
+      $storage.assignTag(@options[0], @options[1])
+    rescue
+      puts("cant assign tag")
+      return
+    end
+    puts("assigned tag")
   end
 
   def changeDirectory()
-    puts("/home/caspian/" + @options[0])
-  end    
+    locations = resultSetToArray($storage.getFilesByTag(@options[0]))
+    location = CLI::UI::Prompt.ask('which one?', options: locations)
+    setCommand("cd #{$config.directory + location}")
+  end
 
-  def help()
-    puts("help menu");
+  def addTag()
+    $storage.addTag(@options[0])
   end
 
   def list()
-    puts($storage.listFiles())
+    list = $storage.listFiles()
+    list.each do |file, tags|
+      puts(file + " : (" + tags + ")")
+    end
+  end
+
+  def openHelix()
+    locations = resultSetToArray($storage.getFilesByTag(@options[0]))
+    location = CLI::UI::Prompt.ask('which one?', options: locations)
+    setCommand("hx #{$config.directory + location}")
+  end
+
+  def setCommand(command)
+    File.new('./command', File::CREAT)
+    File.write('./command', command)
+  end
+
+  def getCommand()
+    if !File.exists?('./command')
+      return
+    end
+    puts(File.read('./command'))
+    File.delete('./command')
+  end
+
+  def help()
+    puts(
+      "taggedFiles <command> [options] \n"\
+      "\n"\
+      "commands: \n"\
+      "al : add link \n"\
+      "as : assign tag \n"\
+      "ls : list files with their tags \n"\
+      "cd : change directory to file \n"\
+      "at : add tag \n"
+    )
   end
 
   def run()
@@ -151,12 +201,18 @@ class Command
     case @command
     when "al"
       addLink()
-    when "at"
+    when "as"
       assignTag()
     when "ls"
       list()
     when "cd"
       changeDirectory()
+    when "at"
+      addTag()
+    when "hx"
+      openHelix()
+    when "getCommand"
+      getCommand()
     else
       help()
     end
