@@ -16,14 +16,25 @@ TODO
 
 ### the extra part
 Because we cant change the current shells directory from the script we need to be a little creative.
+
 The script stores the command that should be run and returns it when called with the option 'getCommand'.
+
 However this is kind of scary, if somehow my script returns `rm -rf ~` we are fucked so if possible i would like to find another solution.
 
-This is the function i added to my fishrc.
+This is the function i added to my fish config
 ```
   function tf
     /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $argv
     eval (/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
     # eval (cd ~)
   end
+```
+
+
+In bash the same would work by pasting this in .bashrc
+```
+tf () {
+    /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $@
+    eval $(/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
+}
 ```
