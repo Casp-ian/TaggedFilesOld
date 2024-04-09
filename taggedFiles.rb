@@ -6,17 +6,22 @@ require "cli/ui"
 
 class Config
   def initialize()
-    config = "/home/caspian/.config/tagf.toml"
+    config = "/home/caspian/.config/taggedFiles.toml"
     if !File.exists?(config)
       File.new(config, File::CREAT)
-      File.write(config, "test")
-    else
-      contents = File.open(config).read()
-      toml = TOML::Parser.new(contents).parsed()
+      File.write(config, 
+        "[data] \n"\
+        "directory = \"/home/caspian/TaggedFiles/\""
+      )
     end
 
-    # TODO actually read
-    @directory = "/home/caspian/TaggedFiles/"
+    contents = File.open(config).read()
+    toml = TOML::Parser.new(contents).parsed()
+
+    @directory = toml["data"]["directory"]
+    
+    # # TODO actually read
+    # @directory = "/home/caspian/TaggedFiles/"
     
   end
 
@@ -84,7 +89,8 @@ class Storage
   def getFilesByTag(tagName)
     tagId = getTagId(tagName)
     fileIds = @db.execute("select fileId from connections where tagId = ?", tagId)
-    return @db.execute("select name from files where id in (?)", fileIds)  
+    placeholders = (['?'] * fileIds.length).join(',')
+    return @db.execute("select name from files where id in (#{placeholders})", fileIds)  
   end
   
   def listFiles()
@@ -160,7 +166,7 @@ class Command
   def list()
     list = $storage.listFiles()
     list.each do |file, tags|
-      puts(file + " : (" + tags + ")")
+      puts(file + " : (#{tags})")
     end
   end
 
