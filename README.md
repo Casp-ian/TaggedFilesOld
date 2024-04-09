@@ -23,11 +23,10 @@ However this is kind of scary, if somehow my script returns `rm -rf ~` we are fu
 
 This is the function i added to my fish config
 ```
-  function tf
-    /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $argv
-    eval (/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
-    # eval (cd ~)
-  end
+function tf
+  /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $argv
+  eval (/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
+end
 ```
 
 
