@@ -2,6 +2,7 @@
 
 ## Todo
 
+- add option to remove tags, files and connections
 - make it faster (maybe rewrite in other language)
 - order options based on last used
 - make configurable
