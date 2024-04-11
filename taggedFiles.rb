@@ -61,7 +61,7 @@ class Storage
     @db.execute("insert into connections(tagId, fileId) values (?, ?)", tagId, fileId)
   end
   
-  def getFilesByTags(tagNames)
+  def nameAndPathByTags(tagNames)
     placeholders = (['?'] * tagNames.length).join(',')
     @db.execute("
       select f.name as name, f.path as path from files f
@@ -134,19 +134,19 @@ class Command
   end
 
   def changeDirectory(tags)
-    locations = $storage.getFilesByTags(tags)
+    locations = $storage.nameAndPathByTags(tags)
 
     setCommandForFile('cd', locations, false)
   end
 
   def openHelix(tags)
-    locations = $storage.getFilesByTags(tags)
+    locations = $storage.nameAndPathByTags(tags)
 
     setCommandForFile('hx', locations, false)
   end
 
   def openFiles(tags)
-    locations = $storage.getFilesByTags(tags)
+    locations = $storage.nameAndPathByTags(tags)
 
     setCommandForFile('nautilus', locations, true)
   end
