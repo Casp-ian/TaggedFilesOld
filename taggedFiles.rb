@@ -1,40 +1,14 @@
 #!/usr/bin/ruby
 
-require "toml"
 require "sqlite3"
 require "cli/ui"
 
-class Config
-  def initialize()
-    config = "/home/caspian/.config/taggedFiles.toml"
-    if !File.exists?(config)
-      File.new(config, File::CREAT)
-      File.write(config, 
-        "[data] \n"\
-        "directory = \"/home/caspian/TaggedFiles/\""
-      )
-    end
-
-    contents = File.open(config).read()
-    toml = TOML::Parser.new(contents).parsed()
-
-    @directory = toml["data"]["directory"]
-    
-    # # TODO actually read
-    # @directory = "/home/caspian/TaggedFiles/"
-    
-  end
-
-  attr_accessor :directory
-end
-
-$config = Config.new
-
+$dbLocation = "/home/caspian/TaggedFiles/taggedFiles.db"
 
 class Storage
   
   def initialize()
-    @db = SQLite3::Database.new($config.directory + "taggedFiles.db")
+    @db = SQLite3::Database.new($dbLocation)
 
     @db.execute <<-SQL
       create table if not exists tags (
@@ -45,6 +19,7 @@ class Storage
     @db.execute <<-SQL
       create table if not exists files (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        path TEXT,
         name TEXT
       )
     SQL
@@ -57,8 +32,8 @@ class Storage
   end  
   
   # DATA METHODS -----
-  def addFile(fileName)
-    @db.execute("insert into files(name) values (?)", fileName)
+  def addFile(path, name)
+    @db.execute("insert into files(path, name) values (?, ?)", path, name)
   end
   
   def addTag(tagName)
@@ -86,11 +61,16 @@ class Storage
     @db.execute("insert into connections(tagId, fileId) values (?, ?)", tagId, fileId)
   end
   
-  def getFilesByTag(tagName)
-    tagId = getTagId(tagName)
-    fileIds = @db.execute("select fileId from connections where tagId = ?", tagId)
-    placeholders = (['?'] * fileIds.length).join(',')
-    return @db.execute("select name from files where id in (#{placeholders})", fileIds)  
+  def getFilesByTags(tagNames)
+    placeholders = (['?'] * tagNames.length).join(',')
+    @db.execute("
+      select f.name as name, f.path as path from files f
+      join connections c on f.id = c.fileId
+      join tags t on c.tagId = t.id
+      where t.name in (#{placeholders})
+      group by f.id, f.name
+      having count(*) = (select count(*) from tags where name in (#{placeholders}))
+    ", tagNames + tagNames)
   end
   
   def listFiles()
@@ -112,29 +92,13 @@ $storage = Storage.new()
 
 class Command
   def initialize(arguments)
-    @command = arguments[0]
-    @options = arguments[1..-1]
+    @arguments = arguments
   end
   
-  def resultSetToArray(set)
-    result = []
-    set.each do |item|
-      result.push "#{item[0]}"
-    end 
-    return result
-  end
-
-  def addLink()
+  def addFile()
 
     begin
-      File.symlink(File.absolute_path(@options[0]), $config.directory + File.basename(@options[0]))
-    rescue
-      puts("cant create symlink")
-      return
-    end
-  
-    begin
-      $storage.addFile(File.basename(@options[0]));
+      $storage.addFile(File.absolute_path(@options[0]), File.basename(File.absolute_path(@options[0])));
     rescue
       puts("cant add to database")
       return
@@ -153,10 +117,38 @@ class Command
     puts("assigned tag")
   end
 
-  def changeDirectory()
-    locations = resultSetToArray($storage.getFilesByTag(@options[0]))
-    location = CLI::UI::Prompt.ask('which one?', options: locations)
-    setCommand("cd #{$config.directory + location}")
+  def setCommandForFile(command, locations, inBackground)
+    if locations.length == 0
+      puts("no files match tags")
+      return
+    elsif locations.length == 1
+      location = locations[0]
+      puts("going to #{location[0]}")
+    else
+      CLI::UI::Prompt.ask('which one?') do |handler|
+        locations.each do |location|
+          handler.option(location[0]) {setCommand("#{command} #{location[1]} #{inBackground ? "&":""}")}
+        end
+      end
+    end
+  end
+
+  def changeDirectory(tags)
+    locations = $storage.getFilesByTags(tags)
+
+    setCommandForFile('cd', locations, false)
+  end
+
+  def openHelix(tags)
+    locations = $storage.getFilesByTags(tags)
+
+    setCommandForFile('hx', locations, false)
+  end
+
+  def openFiles(tags)
+    locations = $storage.getFilesByTags(tags)
+
+    setCommandForFile('nautilus', locations, true)
   end
 
   def addTag()
@@ -166,14 +158,8 @@ class Command
   def list()
     list = $storage.listFiles()
     list.each do |file, tags|
-      puts(file + " : (#{tags})")
+      puts("#{file} : (#{tags})")
     end
-  end
-
-  def openHelix()
-    locations = resultSetToArray($storage.getFilesByTag(@options[0]))
-    location = CLI::UI::Prompt.ask('which one?', options: locations)
-    setCommand("hx #{$config.directory + location}")
   end
 
   def setCommand(command)
@@ -194,7 +180,7 @@ class Command
       "taggedFiles <command> [options] \n"\
       "\n"\
       "commands: \n"\
-      "al : add link \n"\
+      "af : add file \n"\
       "as : assign tag \n"\
       "ls : list files with their tags \n"\
       "cd : change directory to file \n"\
@@ -202,27 +188,35 @@ class Command
     )
   end
 
-  def run()
+  def version()
+    puts("0.0.1")
+  end
 
-    case @command
-    when "al"
-      addLink()
-    when "as"
-      assignTag()
-    when "ls"
+  def run()
+    case @arguments[0]
+    when "--add-file", "-f"
+      addFile(@arguments[1..-1])
+    when "--assign", "-a"
+      assignTag(@arguments[1], @arguments[2])
+    when "--list", "-l"
       list()
-    when "cd"
-      changeDirectory()
-    when "at"
-      addTag()
-    when "hx"
-      openHelix()
-    when "getCommand"
+    when "--cd"
+      changeDirectory(@arguments[1..-1])
+    when "--add-tag", "-t"
+      addTag(@arguments[1..-1])
+    when "--hx"
+      openHelix(@arguments[1..-1])
+    when "--nautilus"
+      openFiles(@arguments[1..-1])
+    when "--getCommand"
       getCommand()
-    else
+    when "--help", "-h"
       help()
+    when "--version", "-v"
+      version()
+    else
+      changeDirectory(@arguments[0..-1])
     end
-        
   end
 end
 

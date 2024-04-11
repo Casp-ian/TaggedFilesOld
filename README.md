@@ -1,5 +1,12 @@
  TaggedFiles
 
+## Todo
+
+- make it faster (maybe rewrite in other language)
+- make it work for single files
+- make configurable
+- check for files being deleted
+
 ## idea & inspiration
 Original inspiration for this project was a post about [tag based file systems](https://garrit.xyz/posts/2024-04-02-fuck-trees-use-tags).
 I wanted to make a way to access my files based on tags, but building an entire file system is out of my grasp for now, and i would also like some of my files to still be accesible from my normal file tree.
