@@ -123,7 +123,7 @@ class Command
       return
     elsif locations.length == 1
       location = locations[0]
-      puts("going to #{location[0]}")
+      setCommand("#{command} #{location[1]} #{inBackground ? "&":""}")
     else
       CLI::UI::Prompt.ask('which one?') do |handler|
         locations.each do |location|
