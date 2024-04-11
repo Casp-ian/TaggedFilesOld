@@ -25,7 +25,7 @@ This is the function i added to my fish config
 ```
 function tf
   /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $argv
-  eval (/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
+  eval (/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb --getCommand)
 end
 ```
 
@@ -34,6 +34,6 @@ In bash the same would work by pasting this in .bashrc
 ```
 tf () {
     /home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb $@
-    eval $(/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb getCommand)
+    eval $(/home/caspian/Projects/cli/TaggedFiles/taggedFiles.rb --getCommand)
 }
 ```
