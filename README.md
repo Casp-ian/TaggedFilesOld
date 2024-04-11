@@ -3,7 +3,7 @@
 ## Todo
 
 - make it faster (maybe rewrite in other language)
-- make it work for single files
+- order options based on last used
 - make configurable
 - check for files being deleted
 
