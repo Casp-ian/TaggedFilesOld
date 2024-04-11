@@ -95,21 +95,21 @@ class Command
     @arguments = arguments
   end
   
-  def addFile()
-
-    begin
-      $storage.addFile(File.absolute_path(@options[0]), File.basename(File.absolute_path(@options[0])));
-    rescue
-      puts("cant add to database")
-      return
+  def addFile(names)
+    names.each do |name|
+      begin
+        $storage.addFile(File.absolute_path(name), File.basename(File.absolute_path(name)));
+      rescue
+        puts("cant add to database")
+        return
+      end
     end
-
     puts("added succesfully")
   end
 
-  def assignTag()
+  def assignTag(file, tag)
     begin
-      $storage.assignTag(@options[0], @options[1])
+      $storage.assignTag(file, tag)
     rescue
       puts("cant assign tag")
       return
@@ -151,8 +151,10 @@ class Command
     setCommandForFile('nautilus', locations, true)
   end
 
-  def addTag()
-    $storage.addTag(@options[0])
+  def addTag(tags)
+    tags.each do |tag|
+      $storage.addTag(tag)
+    end
   end
 
   def list()
