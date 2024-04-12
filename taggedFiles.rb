@@ -39,7 +39,19 @@ class Storage
   def addTag(tagName)
     @db.execute("insert into tags(name) values (?)", tagName)
   end
+
+  def deleteFiles(name)
+    fileId = getFileId(name);
+    @db.execute("delete from connections where fileId = ?", fileId)
+    @db.execute("delete from files where id = ?", fileId)
+  end
   
+  def deleteTags(name)
+    tagId = getTagId(name);
+    @db.execute("delete from connections where tagId = ?", tagId)
+    @db.execute("delete from tags where id = ?", tagId)
+  end
+
   def getFileId(fileName)
     @db.execute("select id from files where name = ?", fileName)
   end
@@ -95,7 +107,7 @@ class Command
     @arguments = arguments
   end
   
-  def addFile(names)
+  def addFiles(names)
     names.each do |name|
       begin
         $storage.addFile(File.absolute_path(name), File.basename(File.absolute_path(name)));
@@ -105,6 +117,28 @@ class Command
       end
     end
     puts("added succesfully")
+  end
+
+  def removeFiles(names)
+    names.each do |name|
+      begin
+        $storage.deleteFiles(name)
+        puts("probably succeeded")
+      rescue
+        puts("cant delete file")
+      end
+    end
+  end
+
+  def removeTags(names)
+    names.each do |name|
+      begin
+        $storage.deleteTags(name)
+        puts("probably succeeded")
+      rescue
+        puts("cant delete tags")
+      end
+    end
   end
 
   def assignTag(file, tag)
@@ -151,7 +185,7 @@ class Command
     setCommandForFile('nautilus', locations, true)
   end
 
-  def addTag(tags)
+  def addTags(tags)
     tags.each do |tag|
       $storage.addTag(tag)
     end
@@ -197,15 +231,19 @@ class Command
   def run()
     case @arguments[0]
     when "--add-file", "-f"
-      addFile(@arguments[1..-1])
+      addFiles(@arguments[1..-1])
+    when "--remove-file"
+      removeFiles(@arguments[1..-1])
+    when "--add-tag", "-t"
+      addTags(@arguments[1..-1])
+    when "--remove-tag"
+      removeTags(@arguments[1..-1])
     when "--assign", "-a"
       assignTag(@arguments[1], @arguments[2])
     when "--list", "-l"
       list()
     when "--cd"
       changeDirectory(@arguments[1..-1])
-    when "--add-tag", "-t"
-      addTag(@arguments[1..-1])
     when "--hx"
       openHelix(@arguments[1..-1])
     when "--nautilus"
